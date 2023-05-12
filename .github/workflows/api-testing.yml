@@ -1,36 +1,25 @@
-name: Newman API Tests
-on: 
-  workflow_dispatch:
-jobs: 
-  test: 
-    defaults: 
-      run: 
-        working-directory: ./tests
-    environment: staging
-    name: "Run tests"
+name: Node.js CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
     runs-on: ubuntu-latest
-    steps: 
-      - 
-        uses: actions/checkout@v2
-      - 
-        uses: actions/setup-node@v2
-        with: 
-          node-version: "18"
-      - 
-        name: "Install newman"
-        run: "npm install -g newman"
-      - 
-        name: "Install newman reporter"
-        run: "npm install -g newman-reporter-htmlextra"
-      - 
-        name: "Run tests"
-        run: "newman run NewmanDemo.postman_collection.json -e ReqResDev.postman_environment.json -r htmlextra --reporter-htmlextra-export htmlreport.html --reporter-htmlextra-darkTheme  > runreport1.html"
-      
-      - name: Publish report
-        uses: MeilCli/slack-upload-file@v1
+
+    strategy:
+      matrix:
+        node-version: [14.x, 16.x, 18.x, 20.x]
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
         with:
-          slack_token: ${{ secrets.SLACK_TOKEN }}
-          file_path: './tests/htmlreport.html'
-          file_name: 'postmanReport.html'
-          file_type: 'html'
-          channels: 'api-test-reports'
+          node-version: ${{ matrix.node-version }}
+      - run: npm ci
+      - run: npm run build --if-present
+      - run: npm test
